@@ -1,0 +1,84 @@
+version: '3.8'
+
+services:
+  # MongoDB Database
+  mongodb:
+    image: mongo:7.0
+    container_name: fabi-mongodb
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: admin123
+      MONGO_INITDB_DATABASE: fabi_bd
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - fabi-network
+
+  # Backend API
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: fabi-backend
+    ports:
+      - "3001:3001"
+    environment:
+      NODE_ENV: development
+      PORT: 3001
+      MONGODB_URI: mongodb://admin:admin123@mongodb:27017/fabi_bd?authSource=admin
+      JWT_SECRET: dev-secret-key-change-in-production
+      FRONTEND_URL: http://localhost:3000
+      ML_SERVICE_URL: http://ml-service:8001
+    depends_on:
+      - mongodb
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    networks:
+      - fabi-network
+    command: npm run dev
+
+  # ML Service
+  ml-service:
+    build:
+      context: ./ml-service
+      dockerfile: Dockerfile
+    container_name: fabi-ml-service
+    ports:
+      - "8001:8001"
+    environment:
+      ML_PORT: 8001
+      ML_LOG_LEVEL: info
+    volumes:
+      - ./ml-service:/app
+    networks:
+      - fabi-network
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8001 --reload
+
+  # Frontend (Next.js)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    container_name: fabi-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:3001
+      NEXT_PUBLIC_ML_URL: http://localhost:8001
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+      - /app/.next
+    networks:
+      - fabi-network
+    command: npm run dev
+
+volumes:
+  mongodb_data:
+
+networks:
+  fabi-network:
+    driver: bridge
