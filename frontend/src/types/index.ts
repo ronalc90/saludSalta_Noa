@@ -8,10 +8,13 @@ export interface User {
   _id: string;
   nombre: string;
   email: string;
+  cedula?: string;
   role: UserRole;
   profile?: UserProfile;
-  createdAt: string;
-  updatedAt: string;
+  password?: boolean; // Indica si tiene contraseña configurada
+  faceDescriptors?: number[][]; // Descriptores faciales (si están configurados)
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface UserProfile {

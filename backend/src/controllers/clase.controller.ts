@@ -105,3 +105,43 @@ export const deleteClase = async (req: AuthRequest, res: Response) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+export const getMisClases = async (req: AuthRequest, res: Response) => {
+  try {
+    const clases = await Clase.find({ autorId: req.user._id }).sort({ createdAt: -1 });
+    res.json(clases);
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+export const getEstadisticas = async (req: AuthRequest, res: Response) => {
+  try {
+    // Obtener todas las clases del docente
+    const clases = await Clase.find({ autorId: req.user._id });
+
+    // Calcular estadísticas
+    const totalClases = clases.length;
+    const totalVistas = 0; // Por ahora 0, necesitarías un sistema de tracking de vistas
+
+    // Clases recientes (últimas 5)
+    const clasesRecientes = clases.slice(0, 5);
+
+    // Distribución por categorías
+    const categorias: Record<string, number> = {};
+    clases.forEach(clase => {
+      if (clase.categoria) {
+        categorias[clase.categoria] = (categorias[clase.categoria] || 0) + 1;
+      }
+    });
+
+    res.json({
+      totalClases,
+      totalVistas,
+      clasesRecientes,
+      categorias,
+    });
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+};

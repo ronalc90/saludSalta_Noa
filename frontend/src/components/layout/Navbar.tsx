@@ -28,13 +28,30 @@ export function Navbar() {
   ];
 
   const privateLinks = [
-    { href: '/dashboard', label: 'Panel' },
     { href: '/clases', label: 'Clases' },
     { href: '/imc', label: 'IMC' },
     { href: '/predictor', label: 'Predictor' },
   ];
 
-  const links = isAuthenticated ? [...publicLinks, ...privateLinks] : publicLinks;
+  const docenteLinks = [
+    { href: '/docente/mis-clases', label: 'Mis Clases' },
+    { href: '/docente/estadisticas', label: 'Estadísticas' },
+  ];
+
+  const adminLinks = [
+    { href: '/admin', label: 'Admin' },
+  ];
+
+  // Construir links basados en el rol del usuario
+  let links = publicLinks;
+  if (isAuthenticated) {
+    links = [...publicLinks, ...privateLinks];
+    if (user?.role === 'docente') {
+      links = [...links, ...docenteLinks];
+    } else if (user?.role === 'admin') {
+      links = [...links, ...adminLinks];
+    }
+  }
 
   return (
     <nav
@@ -50,19 +67,19 @@ export function Navbar() {
               <div className="w-12 h-12 bg-gradient-to-br from-primary-600 to-primary-700 rounded-xl flex items-center justify-center shadow-lg">
                 <span className="text-white text-2xl font-bold">S</span>
               </div>
-              <span className="text-2xl font-bold text-gray-900 no-underline">
+              <span className="text-xl font-bold text-gray-900 no-underline">
                 Salud Para Salta y NOA
               </span>
             </Link>
           </div>
 
           {/* Links desktop */}
-          <div className="hidden md:flex items-center gap-6">
+          <div className="hidden md:flex items-center gap-3">
             {links.map((link) => (
               <Link
                 key={link.href}
                 href={link.href}
-                className={`text-lg font-medium px-3 py-2 rounded-lg transition-colors no-underline ${
+                className={`text-sm font-medium px-2 py-2 rounded-lg transition-colors no-underline whitespace-nowrap ${
                   pathname === link.href
                     ? 'bg-primary-100 text-primary-700'
                     : 'text-gray-700 hover:bg-gray-100'
@@ -74,19 +91,19 @@ export function Navbar() {
             ))}
 
             {isAuthenticated ? (
-              <div className="flex items-center gap-4 ml-4 pl-4 border-l-2 border-gray-200">
+              <div className="flex items-center gap-2 ml-3 pl-3 border-l-2 border-gray-200">
                 <Link
                   href="/perfil"
-                  className="text-lg font-medium text-gray-700 hover:text-primary-600 no-underline"
+                  className="text-sm font-medium text-gray-700 hover:text-primary-600 no-underline whitespace-nowrap"
                 >
-                  {user?.nombre || 'Perfil'}
+                  {user?.nombre?.split(' ')[0] || 'Perfil'}
                 </Link>
                 <Button variant="outline" size="sm" onClick={handleLogout}>
-                  Cerrar Sesión
+                  Salir
                 </Button>
               </div>
             ) : (
-              <div className="flex gap-3 ml-4">
+              <div className="flex gap-2 ml-3">
                 <Link href="/login">
                   <Button variant="outline" size="sm">
                     Ingresar
@@ -143,7 +160,7 @@ export function Navbar() {
                   className="block text-lg font-medium px-4 py-3 rounded-lg text-gray-700 hover:bg-gray-100 no-underline"
                   onClick={() => setMobileMenuOpen(false)}
                 >
-                  {user?.nombre || 'Mi Perfil'}
+                  {user?.nombre?.split(' ')[0] || 'Mi Perfil'}
                 </Link>
                 <div className="px-4 py-2">
                   <Button variant="outline" size="md" onClick={handleLogout} className="w-full">

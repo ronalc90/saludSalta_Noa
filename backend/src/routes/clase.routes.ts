@@ -10,11 +10,15 @@ import {
   createClase,
   updateClase,
   deleteClase,
+  getMisClases,
+  getEstadisticas,
 } from '../controllers/clase.controller';
 
 const router = Router();
 
 router.get('/', getClases);
+router.get('/mis-clases', protect, authorize('docente', 'admin'), getMisClases);
+router.get('/estadisticas', protect, authorize('docente', 'admin'), getEstadisticas);
 router.get('/:id', getClaseById);
 
 // Docente routes

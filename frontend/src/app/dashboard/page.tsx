@@ -18,12 +18,24 @@ export default function DashboardPage() {
   const { isAuthenticated, user } = useAuthStore();
 
   useEffect(() => {
-    if (!isAuthenticated) {
-      router.push('/login');
-    }
+    // Dar tiempo para que el store se hidrate desde localStorage
+    const checkAuth = setTimeout(() => {
+      if (!isAuthenticated) {
+        router.push('/login');
+      }
+    }, 100);
+
+    return () => clearTimeout(checkAuth);
   }, [isAuthenticated, router]);
 
-  if (!isAuthenticated) return null;
+  // Mostrar loading mientras se verifica autenticación
+  if (!user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <p className="text-xl">Cargando...</p>
+      </div>
+    );
+  }
 
   const features = [
     { title: 'Clases Educativas', description: 'Explora videos y materiales sobre salud', link: '/clases', icon: '📚', color: 'bg-blue-500' },

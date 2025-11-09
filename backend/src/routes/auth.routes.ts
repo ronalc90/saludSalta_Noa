@@ -11,8 +11,11 @@ import {
   webauthnLoginOptions,
   webauthnLoginVerify,
   faceLogin,
+  changePassword,
+  updateFace,
 } from '../controllers/auth.controller';
 import { authLimiter } from '../middleware/rateLimiter';
+import { protect } from '../middleware/auth';
 
 const router = Router();
 
@@ -27,5 +30,9 @@ router.post('/webauthn/register-options', webauthnRegisterOptions);
 router.post('/webauthn/register-verify', webauthnRegisterVerify);
 router.post('/webauthn/login-options', webauthnLoginOptions);
 router.post('/webauthn/login-verify', webauthnLoginVerify);
+
+// Profile update routes (require authentication)
+router.post('/change-password', protect, changePassword);
+router.post('/update-face', protect, updateFace);
 
 export default router;

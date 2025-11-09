@@ -6,6 +6,7 @@ import { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import User from '../models/User';
+import { AuthRequest } from '../middleware/auth';
 import {
   generateRegistrationOptions,
   verifyRegistrationResponse,
@@ -30,7 +31,7 @@ const generateToken = (id: string): string => {
 
 export const register = async (req: Request, res: Response) => {
   try {
-    const { nombre, email, cedula, password, consentimiento, faceData, faceDescriptors } = req.body;
+    const { nombre, email, cedula, password, consentimiento, faceData, faceDescriptors, role } = req.body;
 
     if (!consentimiento) {
       return res.status(400).json({ message: 'Debe aceptar el consentimiento' });
@@ -65,6 +66,9 @@ export const register = async (req: Request, res: Response) => {
       }
     }
 
+    // Validar y establecer el rol
+    const userRole = role === 'docente' || role === 'admin' ? role : 'usuario';
+
     const user = await User.create({
       nombre,
       email,
@@ -72,7 +76,7 @@ export const register = async (req: Request, res: Response) => {
       password: hashedPassword,
       faceData: faceData || undefined, // Legacy - mantener por compatibilidad
       faceDescriptors: faceDescriptors || undefined,
-      role: 'usuario',
+      role: userRole,
     });
 
     const token = generateToken(user._id.toString());
@@ -84,7 +88,8 @@ export const register = async (req: Request, res: Response) => {
         email: user.email,
         cedula: user.cedula,
         role: user.role,
-        hasFaceAuth: !!(faceDescriptors && faceDescriptors.length > 0),
+        password: !!hashedPassword,
+        faceDescriptors: !!(faceDescriptors && faceDescriptors.length > 0) ? [] : undefined,
       },
       token,
       message: 'Registro exitoso',
@@ -110,13 +115,20 @@ export const login = async (req: Request, res: Response) => {
 
     const token = generateToken(user._id.toString());
 
+    // Verificar si tiene reconocimiento facial configurado
+    const userWithFaceData = await User.findById(user._id).select('+faceDescriptors');
+    const hasFaceAuth = !!(userWithFaceData?.faceDescriptors && userWithFaceData.faceDescriptors.length > 0);
+
     res.json({
       user: {
         _id: user._id,
         nombre: user.nombre,
         email: user.email,
+        cedula: user.cedula,
         role: user.role,
         profile: user.profile,
+        password: !!user.password,
+        faceDescriptors: hasFaceAuth ? [] : undefined,
       },
       token,
       message: 'Login exitoso',
@@ -266,14 +278,14 @@ const compareFaceImages = (storedImages: string[], capturedImage: string): boole
 
 export const faceLogin = async (req: Request, res: Response) => {
   try {
-    const { cedula, faceData } = req.body;
+    const { cedula, faceData, password } = req.body;
 
     if (!cedula || !faceData) {
       return res.status(400).json({ message: 'Cédula y datos faciales son requeridos' });
     }
 
-    // Buscar usuario por cédula
-    const user = await User.findOne({ cedula }).select('+faceData');
+    // Buscar usuario por cédula con datos faciales y contraseña
+    const user = await User.findOne({ cedula }).select('+faceData +faceDescriptors +password');
 
     if (!user) {
       return res.status(404).json({
@@ -281,14 +293,40 @@ export const faceLogin = async (req: Request, res: Response) => {
       });
     }
 
-    if (!user.faceData || user.faceData.length === 0) {
+    // Si es docente, verificar contraseña primero
+    if (user.role === 'docente') {
+      if (!password) {
+        return res.status(400).json({
+          message: 'Los docentes deben ingresar su contraseña además del reconocimiento facial'
+        });
+      }
+
+      if (!user.password) {
+        return res.status(400).json({
+          message: 'Este usuario no tiene contraseña configurada'
+        });
+      }
+
+      const isPasswordValid = await bcrypt.compare(password, user.password);
+      if (!isPasswordValid) {
+        return res.status(401).json({
+          message: 'Contraseña incorrecta'
+        });
+      }
+    }
+
+    // Verificar que tenga al menos uno de los dos métodos de reconocimiento facial
+    const hasFaceData = user.faceData && user.faceData.length > 0;
+    const hasFaceDescriptors = user.faceDescriptors && user.faceDescriptors.length > 0;
+
+    if (!hasFaceData && !hasFaceDescriptors) {
       return res.status(400).json({
         message: 'Este usuario no tiene reconocimiento facial configurado'
       });
     }
 
     // Comparar rostro capturado con los rostros almacenados
-    const isMatch = compareFaceImages(user.faceData, faceData);
+    const isMatch = compareFaceImages(user.faceData || [], faceData);
 
     if (!isMatch) {
       return res.status(401).json({
@@ -307,10 +345,80 @@ export const faceLogin = async (req: Request, res: Response) => {
         cedula: user.cedula,
         role: user.role,
         profile: user.profile,
+        password: !!user.password,
+        faceDescriptors: hasFaceDescriptors ? [] : undefined,
       },
       token,
       message: `¡Bienvenido/a ${user.nombre}!`,
     });
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+export const changePassword = async (req: AuthRequest, res: Response) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    const userId = req.user._id;
+
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ message: 'Contraseña actual y nueva contraseña son requeridas' });
+    }
+
+    const user = await User.findById(userId).select('+password');
+    if (!user) {
+      return res.status(404).json({ message: 'Usuario no encontrado' });
+    }
+
+    if (!user.password) {
+      return res.status(400).json({ message: 'Este usuario no tiene contraseña configurada' });
+    }
+
+    const isMatch = await bcrypt.compare(currentPassword, user.password);
+    if (!isMatch) {
+      return res.status(401).json({ message: 'Contraseña actual incorrecta' });
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    user.password = hashedPassword;
+    await user.save();
+
+    res.json({ message: 'Contraseña actualizada exitosamente' });
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+export const updateFace = async (req: AuthRequest, res: Response) => {
+  try {
+    const { faceImages, faceDescriptors } = req.body;
+    const userId = req.user._id;
+
+    if (!faceDescriptors || faceDescriptors.length === 0) {
+      return res.status(400).json({ message: 'Descriptores faciales son requeridos' });
+    }
+
+    // Validar que cada descriptor tenga 128 dimensiones
+    for (const desc of faceDescriptors) {
+      if (!Array.isArray(desc) || desc.length !== 128) {
+        return res.status(400).json({
+          message: 'Descriptores faciales inválidos. Cada descriptor debe tener 128 dimensiones.'
+        });
+      }
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: 'Usuario no encontrado' });
+    }
+
+    user.faceDescriptors = faceDescriptors;
+    if (faceImages) {
+      user.faceData = faceImages;
+    }
+    await user.save();
+
+    res.json({ message: 'Identificación facial actualizada exitosamente' });
   } catch (error: any) {
     res.status(500).json({ message: error.message });
   }
