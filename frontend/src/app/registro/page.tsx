@@ -6,20 +6,28 @@
 'use client';
 
 export const dynamic = 'force-dynamic';
+export const dynamicParams = true;
+export const revalidate = 0;
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import dynamicImport from 'next/dynamic';
 import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Alert } from '@/components/ui/Alert';
 import { Card } from '@/components/ui/Card';
-import { AutoFaceCapture } from '@/components/auth/AutoFaceCapture';
 import apiClient from '@/lib/api';
 import { useAuthStore } from '@/store/authStore';
 import type { AuthResponse } from '@/types';
+
+// Import AutoFaceCapture dynamically to avoid SSR issues with face-api
+const AutoFaceCapture = dynamicImport(() => import('@/components/auth/AutoFaceCapture').then(mod => ({ default: mod.AutoFaceCapture })), {
+  ssr: false,
+  loading: () => <p>Cargando captura facial...</p>
+});
 
 export default function RegistroPage() {
   const router = useRouter();
