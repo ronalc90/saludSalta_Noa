@@ -25,11 +25,6 @@ import healthRoutes from './routes/health.routes';
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// Middleware de seguridad - Configurar helmet antes de CORS
-app.use(helmet({
-  crossOriginResourcePolicy: { policy: "cross-origin" },
-}));
-
 // Configuración de CORS para múltiples orígenes
 const allowedOrigins = [
   'http://localhost:3000',
@@ -40,36 +35,41 @@ const allowedOrigins = [
 
 console.log('🌐 [CORS] Orígenes permitidos:', allowedOrigins);
 
-// CORS middleware simplificado y robusto
-app.use((req, res, next) => {
-  const origin = req.headers.origin;
+// Configuración CORS usando el paquete oficial (mejor compatibilidad con proxies)
+const corsOptions = {
+  origin: function (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) {
+    console.log(`📡 [CORS] Verificando origen: ${origin || 'sin origen'}`);
 
-  console.log(`📡 [CORS] Request desde: ${origin || 'sin origen'} → ${req.method} ${req.path}`);
+    // Permitir requests sin origin (como Postman, cURL, o server-to-server)
+    if (!origin) {
+      console.log('✅ [CORS] Request sin origin permitido');
+      return callback(null, true);
+    }
 
-  // Aplicar headers CORS inmediatamente para TODOS los requests
-  if (origin && allowedOrigins.includes(origin)) {
-    // Establecer headers CORS ANTES de cualquier procesamiento
-    res.setHeader('Access-Control-Allow-Origin', origin);
-    res.setHeader('Access-Control-Allow-Credentials', 'true');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept');
-    res.setHeader('Access-Control-Max-Age', '86400');
-    res.setHeader('Vary', 'Origin');
+    // Verificar si el origin está en la lista permitida
+    if (allowedOrigins.includes(origin)) {
+      console.log(`✅ [CORS] Origen permitido: ${origin}`);
+      return callback(null, true);
+    }
 
-    console.log(`✅ [CORS] Headers aplicados para origen permitido: ${origin}`);
-  } else if (origin) {
-    console.warn(`⚠️  [CORS] Origen NO permitido: ${origin}`);
+    console.warn(`❌ [CORS] Origen bloqueado: ${origin}`);
     console.warn(`⚠️  [CORS] Orígenes válidos:`, allowedOrigins);
-  }
+    callback(new Error(`Origen no permitido por CORS: ${origin}`), false);
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
+  maxAge: 86400, // 24 horas
+  optionsSuccessStatus: 200
+};
 
-  // Manejar preflight OPTIONS inmediatamente
-  if (req.method === 'OPTIONS') {
-    console.log('✅ [CORS] Preflight OPTIONS respondido con status 200');
-    return res.status(200).end();
-  }
+// Aplicar CORS antes de helmet para evitar conflictos
+app.use(cors(corsOptions));
 
-  next();
-});
+// Middleware de seguridad - Configurar helmet después de CORS
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" },
+}));
 
 // Rate limiting
 app.use(rateLimiter);
