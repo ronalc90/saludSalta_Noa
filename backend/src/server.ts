@@ -27,9 +27,30 @@ const PORT = process.env.PORT || 3001;
 
 // Middleware de seguridad
 app.use(helmet());
+
+// Configuración de CORS para múltiples orígenes
+const allowedOrigins = [
+  'http://localhost:3000',
+  'https://www.saludadultomayor.org',
+  'https://saludadultomayor.org',
+  process.env.FRONTEND_URL,
+].filter(Boolean); // Eliminar valores undefined
+
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+  origin: (origin, callback) => {
+    // Permitir requests sin origen (como Postman, curl, apps móviles)
+    if (!origin) return callback(null, true);
+
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      console.warn(`⚠️  Origen bloqueado por CORS: ${origin}`);
+      callback(new Error('No permitido por CORS'));
+    }
+  },
   credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 
 // Rate limiting
