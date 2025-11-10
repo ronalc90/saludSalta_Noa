@@ -66,6 +66,47 @@ const corsOptions = {
 // Aplicar CORS antes de helmet para evitar conflictos
 app.use(cors(corsOptions));
 
+// Middleware adicional para FORZAR headers CORS (Railway sobrescribe headers)
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+
+  if (origin && allowedOrigins.includes(origin)) {
+    // Forzar headers en cada respuesta interceptando writeHead
+    const originalWriteHead = res.writeHead;
+    const originalEnd = res.end;
+    const originalSend = res.send;
+
+    // Función para forzar headers
+    const forceHeaders = () => {
+      res.setHeader('Access-Control-Allow-Origin', origin);
+      res.setHeader('Access-Control-Allow-Credentials', 'true');
+      res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
+      res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept');
+      console.log(`🔒 [FORCE-CORS] Headers forzados para: ${origin}`);
+    };
+
+    // Interceptar writeHead (se llama antes de enviar headers)
+    res.writeHead = function(this: any, ...args: any[]) {
+      forceHeaders();
+      return originalWriteHead.apply(this, args as any);
+    };
+
+    // Interceptar end (último recurso)
+    res.end = function(this: any, ...args: any[]) {
+      forceHeaders();
+      return originalEnd.apply(this, args as any);
+    } as any;
+
+    // Interceptar send
+    res.send = function(this: any, ...args: any[]) {
+      forceHeaders();
+      return originalSend.apply(this, args as any);
+    } as any;
+  }
+
+  next();
+});
+
 // Middleware de seguridad - Configurar helmet después de CORS
 app.use(helmet({
   crossOriginResourcePolicy: { policy: "cross-origin" },
