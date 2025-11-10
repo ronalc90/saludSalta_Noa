@@ -25,8 +25,10 @@ import healthRoutes from './routes/health.routes';
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// Middleware de seguridad
-app.use(helmet());
+// Middleware de seguridad - Configurar helmet antes de CORS
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" },
+}));
 
 // Configuración de CORS para múltiples orígenes
 const allowedOrigins = [
@@ -36,22 +38,33 @@ const allowedOrigins = [
   process.env.FRONTEND_URL,
 ].filter(Boolean); // Eliminar valores undefined
 
-app.use(cors({
-  origin: (origin, callback) => {
-    // Permitir requests sin origen (como Postman, curl, apps móviles)
-    if (!origin) return callback(null, true);
+console.log('🌐 [CORS] Orígenes permitidos:', allowedOrigins);
 
-    if (allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      console.warn(`⚠️  Origen bloqueado por CORS: ${origin}`);
-      callback(new Error('No permitido por CORS'));
-    }
-  },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-}));
+// CORS middleware personalizado con logging
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+
+  console.log(`📡 [CORS] Request desde: ${origin || 'sin origen'} → ${req.method} ${req.path}`);
+
+  // Si el origen está permitido o no hay origen, configurar headers
+  if (!origin || allowedOrigins.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin || '*');
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+    res.setHeader('Access-Control-Max-Age', '86400'); // 24 horas
+  } else {
+    console.warn(`⚠️  [CORS] Origen bloqueado: ${origin}`);
+  }
+
+  // Manejar preflight OPTIONS request
+  if (req.method === 'OPTIONS') {
+    console.log('✅ [CORS] Preflight OPTIONS respondido');
+    return res.sendStatus(204);
+  }
+
+  next();
+});
 
 // Rate limiting
 app.use(rateLimiter);
