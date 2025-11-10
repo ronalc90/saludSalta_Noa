@@ -5,6 +5,7 @@
 import { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import mongoose from 'mongoose';
 import User from '../models/User';
 import { AuthRequest } from '../middleware/auth';
 import {
@@ -25,8 +26,8 @@ const generateToken = (id: string): string => {
   const JWT_SECRET = getJWTSecret();
   console.log('🔑 [Generando token] JWT_SECRET:', JWT_SECRET.substring(0, 30) + '...');
   return jwt.sign({ id }, JWT_SECRET, {
-    expiresIn: process.env.JWT_EXPIRES_IN || '7d',
-  });
+    expiresIn: (process.env.JWT_EXPIRES_IN || '7d') as string,
+  } as jwt.SignOptions);
 };
 
 export const register = async (req: Request, res: Response) => {
@@ -79,7 +80,7 @@ export const register = async (req: Request, res: Response) => {
       role: userRole,
     });
 
-    const token = generateToken(user._id.toString());
+    const token = generateToken((user._id as mongoose.Types.ObjectId).toString());
 
     res.status(201).json({
       user: {
@@ -113,7 +114,7 @@ export const login = async (req: Request, res: Response) => {
       return res.status(401).json({ message: 'Credenciales inválidas' });
     }
 
-    const token = generateToken(user._id.toString());
+    const token = generateToken((user._id as mongoose.Types.ObjectId).toString());
 
     // Verificar si tiene reconocimiento facial configurado
     const userWithFaceData = await User.findById(user._id).select('+faceDescriptors');
@@ -150,7 +151,7 @@ export const webauthnRegisterOptions = async (req: Request, res: Response) => {
     const options = await generateRegistrationOptions({
       rpName: RP_NAME,
       rpID: RP_ID,
-      userID: user._id.toString(),
+      userID: (user._id as mongoose.Types.ObjectId).toString(),
       userName: user.email,
       userDisplayName: user.nombre,
       attestationType: 'none',
@@ -232,7 +233,7 @@ export const webauthnLoginVerify = async (req: Request, res: Response) => {
     }
 
     // Simplified verification for demo purposes
-    const token = generateToken(user._id.toString());
+    const token = generateToken((user._id as mongoose.Types.ObjectId).toString());
 
     res.json({
       user: {
@@ -335,7 +336,7 @@ export const faceLogin = async (req: Request, res: Response) => {
     }
 
     // Generar token
-    const token = generateToken(user._id.toString());
+    const token = generateToken((user._id as mongoose.Types.ObjectId).toString());
 
     res.json({
       user: {
