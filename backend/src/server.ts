@@ -124,6 +124,23 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+// Endpoint de diagnóstico CORS
+app.options('/api/cors-test', (req, res) => {
+  console.log('🔍 [CORS-TEST] Headers recibidos:', req.headers);
+  console.log('🔍 [CORS-TEST] Origin:', req.headers.origin);
+  res.status(200).end();
+});
+
+app.get('/api/cors-test', (req, res) => {
+  console.log('🔍 [CORS-TEST] GET - Headers enviados:', res.getHeaders());
+  res.json({
+    message: 'CORS Test OK',
+    origin: req.headers.origin,
+    headersRecibidos: req.headers,
+    headersEnviados: res.getHeaders()
+  });
+});
+
 // Rutas API
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
