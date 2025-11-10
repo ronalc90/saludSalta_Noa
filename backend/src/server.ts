@@ -40,63 +40,32 @@ const allowedOrigins = [
 
 console.log('🌐 [CORS] Orígenes permitidos:', allowedOrigins);
 
-// CORS middleware personalizado con logging y sobrescritura forzada
+// CORS middleware simplificado y robusto
 app.use((req, res, next) => {
   const origin = req.headers.origin;
 
   console.log(`📡 [CORS] Request desde: ${origin || 'sin origen'} → ${req.method} ${req.path}`);
 
-  // Interceptar todas las respuestas para forzar headers CORS correctos
-  const originalSend = res.send;
-  const originalJson = res.json;
-  const originalStatus = res.status;
-  const originalSendStatus = res.sendStatus;
+  // Aplicar headers CORS inmediatamente para TODOS los requests
+  if (origin && allowedOrigins.includes(origin)) {
+    // Establecer headers CORS ANTES de cualquier procesamiento
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept');
+    res.setHeader('Access-Control-Max-Age', '86400');
+    res.setHeader('Vary', 'Origin');
 
-  const applyHeaders = () => {
-    if (!origin || allowedOrigins.includes(origin)) {
-      // Remover cualquier header CORS existente primero
-      res.removeHeader('Access-Control-Allow-Origin');
+    console.log(`✅ [CORS] Headers aplicados para origen permitido: ${origin}`);
+  } else if (origin) {
+    console.warn(`⚠️  [CORS] Origen NO permitido: ${origin}`);
+    console.warn(`⚠️  [CORS] Orígenes válidos:`, allowedOrigins);
+  }
 
-      // Establecer headers CORS correctos
-      res.setHeader('Access-Control-Allow-Origin', origin || '*');
-      res.setHeader('Access-Control-Allow-Credentials', 'true');
-      res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
-      res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
-      res.setHeader('Access-Control-Max-Age', '86400');
-      res.setHeader('Vary', 'Origin');
-
-      console.log(`✅ [CORS] Headers aplicados para: ${origin || 'sin origen'}`);
-    } else {
-      console.warn(`⚠️  [CORS] Origen bloqueado: ${origin}`);
-    }
-  };
-
-  // Sobrescribir métodos de respuesta
-  res.send = function(data) {
-    applyHeaders();
-    return originalSend.call(this, data);
-  };
-
-  res.json = function(data) {
-    applyHeaders();
-    return originalJson.call(this, data);
-  };
-
-  res.status = function(code) {
-    applyHeaders();
-    return originalStatus.call(this, code);
-  };
-
-  res.sendStatus = function(code) {
-    applyHeaders();
-    return originalSendStatus.call(this, code);
-  };
-
-  // Manejar preflight OPTIONS request inmediatamente
+  // Manejar preflight OPTIONS inmediatamente
   if (req.method === 'OPTIONS') {
-    console.log('✅ [CORS] Preflight OPTIONS respondido');
-    applyHeaders();
-    return res.sendStatus(204);
+    console.log('✅ [CORS] Preflight OPTIONS respondido con status 200');
+    return res.status(200).end();
   }
 
   next();
