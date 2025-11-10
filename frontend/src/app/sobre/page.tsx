@@ -12,12 +12,12 @@ export default function SobrePage() {
       <Navbar />
       <main id="main-content" className="flex-1 py-12 bg-gray-50">
         <div className="max-w-4xl mx-auto px-4">
-          <h1 className="section-title text-center break-words">Sobre Plataforma Salud Fabi</h1>
+          <h1 className="section-title text-center break-words">Sobre Plataforma Salud Salta y NOA</h1>
 
           <Card className="mb-8">
             <h2 className="text-2xl font-bold mb-4">Nuestra Misión</h2>
             <p className="text-lg text-gray-700 leading-relaxed mb-4">
-              Plataforma Salud Fabi es una iniciativa dedicada a proporcionar acceso a información
+              Plataforma Salud Salta y NOA es una iniciativa dedicada a proporcionar acceso a información
               de salud accesible y comprensible para personas mayores y comunidades de Salta y NOA
               con baja habilidad tecnológica.
             </p>

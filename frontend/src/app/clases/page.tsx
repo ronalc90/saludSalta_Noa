@@ -273,7 +273,7 @@ export default function ClasesPage() {
                         Por: <strong>{clase.autorNombre || 'Admin'}</strong>
                       </p>
                     </div>
-                    {clase.duracion && (
+                    {clase.duracion > 0 && (
                       <p className="text-sm text-gray-600 mb-4">
                         ⏱️ Duración: {clase.duracion} minutos
                       </p>
