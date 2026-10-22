@@ -15,8 +15,13 @@ import {
   verifyAuthenticationResponse,
 } from '@simplewebauthn/server';
 
-// Helper para obtener JWT_SECRET (lee directamente de process.env para asegurar que está cargado)
-const getJWTSecret = () => process.env.JWT_SECRET || 'default-secret-change-in-production';
+// Helper para obtener JWT_SECRET (lee directamente de process.env para asegurar que está cargado).
+// Sin valor por defecto: un secreto conocido permitiría falsificar sesiones.
+const getJWTSecret = (): string => {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) throw new Error('JWT_SECRET no está definido');
+  return secret;
+};
 
 const RP_NAME = process.env.WEBAUTHN_RP_NAME || 'Plataforma Salud Fabi';
 const RP_ID = process.env.WEBAUTHN_RP_ID || 'localhost';
@@ -24,7 +29,6 @@ const ORIGIN = process.env.WEBAUTHN_ORIGIN || 'http://localhost:3000';
 
 const generateToken = (id: string): string => {
   const JWT_SECRET = getJWTSecret();
-  console.log('🔑 [Generando token] JWT_SECRET:', JWT_SECRET.substring(0, 30) + '...');
   return jwt.sign({ id }, JWT_SECRET, {
     expiresIn: (process.env.JWT_EXPIRES_IN || '7d') as string,
   } as jwt.SignOptions);
@@ -68,7 +72,9 @@ export const register = async (req: Request, res: Response) => {
     }
 
     // Validar y establecer el rol
-    const userRole = role === 'docente' || role === 'admin' ? role : 'usuario';
+    // El registro público solo crea usuarios y docentes (las opciones del formulario).
+    // Un administrador no se puede autoasignar desde aquí.
+    const userRole = role === 'docente' ? 'docente' : 'usuario';
 
     const user = await User.create({
       nombre,

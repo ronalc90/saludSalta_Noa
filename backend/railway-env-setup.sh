@@ -1,12 +1,21 @@
 #!/bin/bash
 # Script para configurar variables de entorno en Railway
 # Ejecuta: railway variables set [VARIABLE]=[VALOR]
+#
+# Los secretos NO van en este archivo (el repositorio es público). Defínelos
+# en tu terminal antes de correrlo:
+#   export MONGODB_URI="mongodb+srv://<usuario>:<contraseña>@<cluster>.mongodb.net/fabi_bd?retryWrites=true&w=majority"
+#   export JWT_SECRET="$(openssl rand -base64 48)"
+
+set -euo pipefail
+: "${MONGODB_URI:?Define MONGODB_URI antes de correr el script}"
+: "${JWT_SECRET:?Define JWT_SECRET antes de correr el script}"
 
 railway variables set NODE_ENV=production
 railway variables set PORT=3001
 railway variables set FRONTEND_URL=https://www.saludadultomayor.org
-railway variables set MONGODB_URI="mongodb+srv://fabiproyecto:roPAh6QTV9rZktwJ@freelanceseguro-cluster.h8arfec.mongodb.net/fabi_bd?retryWrites=true&w=majority"
-railway variables set JWT_SECRET="fabi-super-secret-jwt-key-change-in-production-minimum-32-characters"
+railway variables set MONGODB_URI="$MONGODB_URI"
+railway variables set JWT_SECRET="$JWT_SECRET"
 railway variables set JWT_EXPIRES_IN=7d
 railway variables set WEBAUTHN_RP_NAME="Salud Para Salta y NOA"
 railway variables set WEBAUTHN_RP_ID=www.saludadultomayor.org
