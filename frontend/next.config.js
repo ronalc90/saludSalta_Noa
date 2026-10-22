@@ -14,8 +14,16 @@ const nextConfig = {
     esmExternals: 'loose',
   },
   images: {
-    domains: ['localhost', 'storage.googleapis.com', 'res.cloudinary.com'],
-    formats: ['image/avif', 'image/webp'],
+    // localhost solo en desarrollo: en producción el optimizador no debe pedir
+    // recursos internos del servidor (SSRF).
+    domains: [
+      'storage.googleapis.com',
+      'res.cloudinary.com',
+      ...(process.env.NODE_ENV === 'production' ? [] : ['localhost']),
+    ],
+    // Sin AVIF: Next 14 no tiene parche para GHSA-2xp9-vwfh-vxw4 (ejecución remota
+    // al optimizar AVIF). WebP basta hasta migrar a Next 15.5+ o 16.
+    formats: ['image/webp'],
   },
   webpack: (config, { isServer }) => {
     if (isServer) {
