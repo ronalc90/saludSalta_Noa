@@ -145,7 +145,27 @@ export const login = async (req: Request, res: Response) => {
   }
 };
 
+/**
+ * Ingreso biométrico (WebAuthn y facial) cerrado en producción.
+ *
+ * Hoy no verifica nada en el servidor: WebAuthn entrega un token con solo el
+ * email (el registro de la llave tampoco pide sesión y el reto lo manda el
+ * cliente) y el ingreso facial compara el tamaño de la imagen. Hasta que se
+ * implemente la verificación real, en producción estas rutas responden 503 y
+ * se ingresa con contraseña. En desarrollo se pueden probar con
+ * ALLOW_INSECURE_BIOMETRIC_LOGIN=true.
+ */
+const biometricLoginBlocked = (res: Response): boolean => {
+  const allowed = process.env.NODE_ENV !== 'production' && process.env.ALLOW_INSECURE_BIOMETRIC_LOGIN === 'true';
+  if (allowed) return false;
+  res.status(503).json({
+    message: 'El ingreso biométrico está desactivado temporalmente. Ingresa con tu contraseña.',
+  });
+  return true;
+};
+
 export const webauthnRegisterOptions = async (req: Request, res: Response) => {
+  if (biometricLoginBlocked(res)) return;
   try {
     const { email } = req.body;
 
@@ -174,6 +194,7 @@ export const webauthnRegisterOptions = async (req: Request, res: Response) => {
 };
 
 export const webauthnRegisterVerify = async (req: Request, res: Response) => {
+  if (biometricLoginBlocked(res)) return;
   try {
     const { email, credential } = req.body;
 
@@ -210,6 +231,7 @@ export const webauthnRegisterVerify = async (req: Request, res: Response) => {
 };
 
 export const webauthnLoginOptions = async (req: Request, res: Response) => {
+  if (biometricLoginBlocked(res)) return;
   try {
     const { email } = req.body;
 
@@ -230,6 +252,7 @@ export const webauthnLoginOptions = async (req: Request, res: Response) => {
 };
 
 export const webauthnLoginVerify = async (req: Request, res: Response) => {
+  if (biometricLoginBlocked(res)) return;
   try {
     const { email, credential } = req.body;
 
@@ -284,6 +307,7 @@ const compareFaceImages = (storedImages: string[], capturedImage: string): boole
 };
 
 export const faceLogin = async (req: Request, res: Response) => {
+  if (biometricLoginBlocked(res)) return;
   try {
     const { cedula, faceData, password } = req.body;
 
