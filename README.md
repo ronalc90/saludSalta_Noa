@@ -116,7 +116,7 @@ PORT=3001
 FRONTEND_URL=http://localhost:3000
 
 # MongoDB Atlas - IMPORTANTE: Reemplaza con tu cluster
-MONGODB_URI=mongodb+srv://fabiproyecto:roPAh6QTV9rZktwJ@freelanceseguro-cluster.XXXXX.mongodb.net/fabi_bd?retryWrites=true&w=majority
+MONGODB_URI=mongodb+srv://<usuario>:<contraseña>@<cluster>.mongodb.net/fabi_bd?retryWrites=true&w=majority
 
 # Obtén el host completo de tu cluster en MongoDB Atlas:
 # 1. Ve a tu cluster en MongoDB Atlas
@@ -220,9 +220,9 @@ python -m uvicorn app.main:app --reload --port 8001
 2. Crear cluster (Free tier disponible)
 3. Configurar usuario de base de datos:
    - Username: `fabiproyecto`
-   - Password: `roPAh6QTV9rZktwJ`
+   - Password: `<una contraseña larga y aleatoria>`
    - Cluster name: `freelanceseguro-cluster`
-4. Whitelist IP: `0.0.0.0/0` (permitir todas - configurar mejor en producción)
+4. Whitelist IP: solo las IPs de salida de tu backend (Railway); evita `0.0.0.0/0`
 5. Obtener connection string y actualizar `MONGODB_URI` en variables de entorno
 
 ### 2. Desplegar Frontend en Vercel

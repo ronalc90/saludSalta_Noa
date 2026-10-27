@@ -6,8 +6,11 @@
 import dotenv from 'dotenv';
 dotenv.config();
 
-// Debug: Verificar que se cargó la variable de entorno
-console.log('🔐 [SERVER] JWT_SECRET desde .env:', process.env.JWT_SECRET?.substring(0, 30) + '...');
+// Sin JWT_SECRET no se pueden firmar ni verificar sesiones: el servidor no arranca.
+if (!process.env.JWT_SECRET) {
+  console.error('❌ [SERVER] Falta la variable de entorno JWT_SECRET');
+  process.exit(1);
+}
 
 import express from 'express';
 import cors from 'cors';

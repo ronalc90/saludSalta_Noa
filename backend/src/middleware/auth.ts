@@ -10,8 +10,13 @@ export interface AuthRequest extends Request {
   user?: any;
 }
 
-// Helper para obtener JWT_SECRET (lee directamente de process.env para asegurar que está cargado)
-const getJWTSecret = () => process.env.JWT_SECRET || 'default-secret-change-in-production';
+// Helper para obtener JWT_SECRET (lee directamente de process.env para asegurar que está cargado).
+// Sin valor por defecto: un secreto conocido permitiría falsificar sesiones.
+const getJWTSecret = (): string => {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) throw new Error('JWT_SECRET no está definido');
+  return secret;
+};
 
 export const protect = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
@@ -26,20 +31,14 @@ export const protect = async (req: AuthRequest, res: Response, next: NextFunctio
     }
 
     const JWT_SECRET = getJWTSecret();
-    console.log('🔐 Verificando token con secreto:', JWT_SECRET.substring(0, 30) + '...');
-    console.log('🎫 Token recibido:', token.substring(0, 50) + '...');
-
     const decoded: any = jwt.verify(token, JWT_SECRET);
-    console.log('✅ Token decodificado exitosamente:', decoded);
 
     const user = await User.findById(decoded.id).select('-password');
 
     if (!user) {
-      console.log('❌ Usuario no encontrado en BD:', decoded.id);
       return res.status(401).json({ message: 'Usuario no encontrado' });
     }
 
-    console.log('✅ Usuario autenticado:', user.email);
     req.user = user;
     next();
   } catch (error) {

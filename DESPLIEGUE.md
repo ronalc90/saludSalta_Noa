@@ -69,7 +69,7 @@ Después de desplegar el backend en Railway, configura estas variables:
 NODE_ENV=production
 PORT=3001
 FRONTEND_URL=https://tu-app.vercel.app
-MONGODB_URI=mongodb+srv://fabiproyecto:roPAh6QTV9rZktwJ@freelanceseguro-cluster.mongodb.net/fabi_bd?retryWrites=true&w=majority
+MONGODB_URI=mongodb+srv://<usuario>:<contraseña>@<cluster>.mongodb.net/fabi_bd?retryWrites=true&w=majority
 JWT_SECRET=tu-super-secreto-jwt-key-cambiar-en-produccion-min-32-caracteres
 JWT_EXPIRES_IN=7d
 WEBAUTHN_RP_NAME=Plataforma Salud Fabi

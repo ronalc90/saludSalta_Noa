@@ -15,8 +15,13 @@ import {
   verifyAuthenticationResponse,
 } from '@simplewebauthn/server';
 
-// Helper para obtener JWT_SECRET (lee directamente de process.env para asegurar que está cargado)
-const getJWTSecret = () => process.env.JWT_SECRET || 'default-secret-change-in-production';
+// Helper para obtener JWT_SECRET (lee directamente de process.env para asegurar que está cargado).
+// Sin valor por defecto: un secreto conocido permitiría falsificar sesiones.
+const getJWTSecret = (): string => {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) throw new Error('JWT_SECRET no está definido');
+  return secret;
+};
 
 const RP_NAME = process.env.WEBAUTHN_RP_NAME || 'Plataforma Salud Fabi';
 const RP_ID = process.env.WEBAUTHN_RP_ID || 'localhost';
@@ -24,7 +29,6 @@ const ORIGIN = process.env.WEBAUTHN_ORIGIN || 'http://localhost:3000';
 
 const generateToken = (id: string): string => {
   const JWT_SECRET = getJWTSecret();
-  console.log('🔑 [Generando token] JWT_SECRET:', JWT_SECRET.substring(0, 30) + '...');
   return jwt.sign({ id }, JWT_SECRET, {
     expiresIn: (process.env.JWT_EXPIRES_IN || '7d') as string,
   } as jwt.SignOptions);
@@ -68,7 +72,9 @@ export const register = async (req: Request, res: Response) => {
     }
 
     // Validar y establecer el rol
-    const userRole = role === 'docente' || role === 'admin' ? role : 'usuario';
+    // El registro público solo crea usuarios y docentes (las opciones del formulario).
+    // Un administrador no se puede autoasignar desde aquí.
+    const userRole = role === 'docente' ? 'docente' : 'usuario';
 
     const user = await User.create({
       nombre,
@@ -139,7 +145,27 @@ export const login = async (req: Request, res: Response) => {
   }
 };
 
+/**
+ * Ingreso biométrico (WebAuthn y facial) cerrado en producción.
+ *
+ * Hoy no verifica nada en el servidor: WebAuthn entrega un token con solo el
+ * email (el registro de la llave tampoco pide sesión y el reto lo manda el
+ * cliente) y el ingreso facial compara el tamaño de la imagen. Hasta que se
+ * implemente la verificación real, en producción estas rutas responden 503 y
+ * se ingresa con contraseña. En desarrollo se pueden probar con
+ * ALLOW_INSECURE_BIOMETRIC_LOGIN=true.
+ */
+const biometricLoginBlocked = (res: Response): boolean => {
+  const allowed = process.env.NODE_ENV !== 'production' && process.env.ALLOW_INSECURE_BIOMETRIC_LOGIN === 'true';
+  if (allowed) return false;
+  res.status(503).json({
+    message: 'El ingreso biométrico está desactivado temporalmente. Ingresa con tu contraseña.',
+  });
+  return true;
+};
+
 export const webauthnRegisterOptions = async (req: Request, res: Response) => {
+  if (biometricLoginBlocked(res)) return;
   try {
     const { email } = req.body;
 
@@ -168,6 +194,7 @@ export const webauthnRegisterOptions = async (req: Request, res: Response) => {
 };
 
 export const webauthnRegisterVerify = async (req: Request, res: Response) => {
+  if (biometricLoginBlocked(res)) return;
   try {
     const { email, credential } = req.body;
 
@@ -204,6 +231,7 @@ export const webauthnRegisterVerify = async (req: Request, res: Response) => {
 };
 
 export const webauthnLoginOptions = async (req: Request, res: Response) => {
+  if (biometricLoginBlocked(res)) return;
   try {
     const { email } = req.body;
 
@@ -224,6 +252,7 @@ export const webauthnLoginOptions = async (req: Request, res: Response) => {
 };
 
 export const webauthnLoginVerify = async (req: Request, res: Response) => {
+  if (biometricLoginBlocked(res)) return;
   try {
     const { email, credential } = req.body;
 
@@ -278,6 +307,7 @@ const compareFaceImages = (storedImages: string[], capturedImage: string): boole
 };
 
 export const faceLogin = async (req: Request, res: Response) => {
+  if (biometricLoginBlocked(res)) return;
   try {
     const { cedula, faceData, password } = req.body;
 
