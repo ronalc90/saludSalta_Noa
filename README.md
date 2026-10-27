@@ -4,7 +4,7 @@
 
 [![Sitio publicado](https://img.shields.io/badge/sitio-saludadultomayor.org-16a34a)](https://www.saludadultomayor.org)
 [![Licencia MIT](https://img.shields.io/badge/licencia-MIT-blue)](LICENSE)
-![Next.js 14](https://img.shields.io/badge/Next.js-14-000000?logo=nextdotjs)
+![Next.js 15](https://img.shields.io/badge/Next.js-15-000000?logo=nextdotjs)
 ![Express + TypeScript](https://img.shields.io/badge/Express-TypeScript-3178C6?logo=typescript&logoColor=white)
 ![MongoDB](https://img.shields.io/badge/MongoDB-Mongoose_8-47A248?logo=mongodb&logoColor=white)
 ![FastAPI + scikit-learn](https://img.shields.io/badge/FastAPI-scikit--learn-009688?logo=fastapi&logoColor=white)
@@ -168,7 +168,7 @@ Las pantallas que requieren sesión se capturaron **corriendo el proyecto en loc
 
 ```mermaid
 flowchart LR
-    P["Persona usuaria<br/>navegador o celular"] --> F["Frontend<br/>Next.js 14 + Tailwind<br/>face-api en el navegador<br/>Vercel"]
+    P["Persona usuaria<br/>navegador o celular"] --> F["Frontend<br/>Next.js 15 + Tailwind<br/>face-api en el navegador<br/>Vercel"]
     F -->|"REST + JWT<br/>/api/auth, /api/clases,<br/>/api/health, /api/users"| B["Backend API<br/>Express + TypeScript<br/>Railway"]
     B --> DB[("MongoDB Atlas<br/>usuarios, clases,<br/>historial de IMC")]
     F -->|"GET /api/sintomas<br/>POST /api/predict"| D["Disease Predictor<br/>FastAPI + scikit-learn<br/>Railway, repositorio aparte"]
@@ -177,7 +177,7 @@ flowchart LR
 
 | Pieza | Carpeta | Qué hace |
 |---|---|---|
-| **Frontend** | [`frontend/`](frontend) | Next.js 14 (App Router). Tiene 13 páginas: portada, sobre nosotros, privacidad, términos, registro, ingreso, panel, perfil, clases, IMC, orientación y las dos del panel docente. La sesión (usuario y JWT) se guarda con Zustand en `localStorage`, y Axios agrega el token a cada pedido. |
+| **Frontend** | [`frontend/`](frontend) | Next.js 15 (App Router). Tiene 13 páginas: portada, sobre nosotros, privacidad, términos, registro, ingreso, panel, perfil, clases, IMC, orientación y las dos del panel docente. La sesión (usuario y JWT) se guarda con Zustand en `localStorage`, y Axios agrega el token a cada pedido. |
 | **Backend** | [`backend/`](backend) | API REST en Express + TypeScript con Mongoose. Se ocupa de la autenticación (contraseña, rostro y WebAuthn), los roles, las clases, el IMC y los usuarios. También expone `POST /api/health/predictor`, que consulta al `ml-service` y, si este no responde, devuelve una recomendación genérica de consultar a un médico. |
 | **Disease Predictor** | [`disease-predictor`](https://github.com/ronalc90/saludsalta-disease-predictor) (repositorio aparte) | FastAPI que carga un modelo Random Forest (`modelo_enfermedades.pkl`) con 132 síntomas binarios. La página de orientación lo llama directamente con `NEXT_PUBLIC_DISEASE_PREDICTOR_URL`. |
 | **ml-service** | [`ml-service/`](ml-service) | Predictor alternativo y más simple (base de conocimiento por reglas con 6 condiciones). Lo usa el endpoint `/api/health/predictor` del backend; la interfaz actual usa el Disease Predictor. |
@@ -224,7 +224,7 @@ Esto es lo que hace el código:
 
 | Capa | Tecnologías |
 |---|---|
-| Frontend | Next.js 14.2 (App Router), React 18, TypeScript, Tailwind CSS 3, Zustand, Axios, `@vladmandic/face-api`, `@simplewebauthn/browser` |
+| Frontend | Next.js 15.5 (App Router), React 19, TypeScript, Tailwind CSS 3, Zustand, Axios, `@vladmandic/face-api`, `@simplewebauthn/browser` |
 | Backend | Node.js, Express 4, TypeScript 5, Mongoose 8, jsonwebtoken, bcryptjs, helmet, cors, express-rate-limit, `@simplewebauthn/server`, Axios |
 | Machine learning | Python 3.11, FastAPI, scikit-learn 1.6 (Random Forest), pandas, joblib, Uvicorn |
 | Datos | MongoDB Atlas (producción) y MongoDB 7 (local) |

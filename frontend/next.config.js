@@ -10,33 +10,30 @@ const nextConfig = {
     // No fallar el build por errores de TypeScript
     ignoreBuildErrors: false,
   },
-  experimental: {
-    esmExternals: 'loose',
-  },
+  // Librerías de visión que solo corren en el navegador: en el servidor se
+  // cargan con require nativo en lugar de empaquetarlas.
+  serverExternalPackages: [
+    '@vladmandic/face-api',
+    '@tensorflow/tfjs-node',
+    '@mediapipe/face_detection',
+    '@mediapipe/camera_utils',
+  ],
   images: {
     // localhost solo en desarrollo: en producción el optimizador no debe pedir
     // recursos internos del servidor (SSRF).
-    domains: [
-      'storage.googleapis.com',
-      'res.cloudinary.com',
-      ...(process.env.NODE_ENV === 'production' ? [] : ['localhost']),
+    remotePatterns: [
+      { protocol: 'https', hostname: 'storage.googleapis.com' },
+      { protocol: 'https', hostname: 'res.cloudinary.com' },
+      ...(process.env.NODE_ENV === 'production'
+        ? []
+        : [{ protocol: 'http', hostname: 'localhost' }]),
     ],
-    // Sin AVIF: Next 14 no tiene parche para GHSA-2xp9-vwfh-vxw4 (ejecución remota
-    // al optimizar AVIF). WebP basta hasta migrar a Next 15.5+ o 16.
+    // Sin AVIF: Next 15.5.28 ya corrige GHSA-2xp9-vwfh-vxw4 (ejecución remota al
+    // optimizar AVIF), pero se mantiene fuera como defensa en profundidad.
     formats: ['image/webp'],
   },
-  webpack: (config, { isServer }) => {
-    if (isServer) {
-      // Exclude face-api and tensorflow from server-side bundling
-      config.externals = [
-        ...(config.externals || []),
-        '@vladmandic/face-api',
-        '@tensorflow/tfjs-node',
-        '@mediapipe/face_detection',
-        '@mediapipe/camera_utils'
-      ];
-    }
-    // Ignore missing optional dependencies
+  webpack: (config) => {
+    // face-api referencia @tensorflow/tfjs-node, que no está instalado.
     config.resolve.fallback = {
       ...config.resolve.fallback,
       '@tensorflow/tfjs-node': false,
