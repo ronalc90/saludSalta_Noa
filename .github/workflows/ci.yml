@@ -1,0 +1,140 @@
+# Integración continua del monorepo: un job por parte (frontend, backend, ml-service).
+#
+# frontend y backend son workspaces de npm: el único package-lock.json está en la raíz,
+# así que la instalación (npm ci) se hace siempre desde la raíz.
+# Las acciones van fijadas por SHA de commit (con la versión en el comentario) para que
+# un cambio en la etiqueta de un tercero no altere la CI sin pasar por un PR.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Un solo run por PR: un push nuevo cancela el run anterior del mismo PR.
+# En main no se cancela nada, para que cada commit fusionado quede comprobado.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  frontend:
+    name: frontend (Next.js)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Instalar dependencias (workspaces desde la raíz)
+        working-directory: .
+        run: npm ci --no-audit --no-fund
+
+      - name: Lint
+        run: npm run lint
+
+      # No hay script de typecheck: la comprobación de tipos la hace `next build`
+      # (next.config.js tiene typescript.ignoreBuildErrors: false), en el paso de build.
+
+      # Hoy no hay ningún archivo de test en el frontend; --passWithNoTests evita que
+      # Jest falle por "No tests found" y hace que los tests corran en cuanto se añadan.
+      # Se usa test:ci porque el script `test` arranca Jest en modo --watch.
+      - name: Tests
+        run: npm run test:ci -- --passWithNoTests
+
+      # Variables ficticias, nunca las reales: el build solo tiene que compilar, y las
+      # NEXT_PUBLIC_* se incrustan en el bundle del cliente, así que no deben apuntar a
+      # servicios de verdad ni salir de secretos. El dominio .invalid está reservado
+      # (RFC 2606) y no resuelve nunca. Las variables de entorno del proceso tienen
+      # prioridad sobre frontend/.env.production, que está versionado, así que estas
+      # sustituyen a las URL de producción durante el build.
+      - name: Build (next build)
+        env:
+          NEXT_TELEMETRY_DISABLED: 1
+          NEXT_PUBLIC_API_URL: https://api.ci.invalid
+          NEXT_PUBLIC_ML_URL: https://ml.ci.invalid
+          NEXT_PUBLIC_DISEASE_PREDICTOR_URL: https://predictor.ci.invalid
+          NEXT_PUBLIC_APP_NAME: Salud CI
+        run: npm run build
+
+  backend:
+    name: backend (Node/TypeScript)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Instalar dependencias (workspaces desde la raíz)
+        working-directory: .
+        run: npm ci --no-audit --no-fund
+
+      # Hoy el backend no tiene ningún archivo de test, así que no hace falta MongoDB.
+      # --passWithNoTests evita que Jest falle por "No tests found". Si se añaden tests
+      # que necesiten base de datos, agregar aquí un servicio `mongo` (ver docker-compose.yml)
+      # y pasar MONGODB_URI al paso. Para tests en TypeScript Jest necesitará además un
+      # transformador (ts-jest o similar), que hoy no está instalado.
+      - name: Tests
+        run: npm test -- --ci --passWithNoTests
+
+      # Comprobación de sintaxis y tipos: compila con tsc (tsconfig en modo strict).
+      # `npm run lint` no se incluye: hoy falla en main con 4 errores de ESLint en el
+      # código de la app, que queda fuera del alcance de este workflow.
+      - name: Compilar (tsc)
+        run: npm run build
+
+  ml-service:
+    name: ml-service (Python)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: ml-service
+    env:
+      PIP_DISABLE_PIP_VERSION_CHECK: 1
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # Misma versión que la imagen del Dockerfile (python:3.11-slim).
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: ml-service/requirements.txt
+
+      - name: Instalar requirements
+        run: pip install -r requirements.txt
+
+      # El servicio no tiene tests (ni pytest en requirements.txt). En su lugar se
+      # comprueba que todo el código compila y que la app importa con las dependencias
+      # instaladas, lo que detecta incompatibilidades al actualizar fastapi o pydantic.
+      - name: Comprobar sintaxis (compileall)
+        run: python -m compileall -q app
+
+      - name: Comprobar que la app importa
+        run: python -c "import app.main"
