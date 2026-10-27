@@ -38,6 +38,9 @@ jobs:
     defaults:
       run:
         working-directory: frontend
+    env:
+      # Sin telemetría de Next.js en la CI (también la envía `next lint`).
+      NEXT_TELEMETRY_DISABLED: 1
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
@@ -71,7 +74,6 @@ jobs:
       # sustituyen a las URL de producción durante el build.
       - name: Build (next build)
         env:
-          NEXT_TELEMETRY_DISABLED: 1
           NEXT_PUBLIC_API_URL: https://api.ci.invalid
           NEXT_PUBLIC_ML_URL: https://ml.ci.invalid
           NEXT_PUBLIC_DISEASE_PREDICTOR_URL: https://predictor.ci.invalid
