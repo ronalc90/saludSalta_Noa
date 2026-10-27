@@ -1,10 +1,10 @@
 # Frontend - Plataforma Salud Fabi
 
-Frontend desarrollado con Next.js 14, TypeScript y Tailwind CSS para adultos mayores.
+Frontend desarrollado con Next.js 15, TypeScript y Tailwind CSS para adultos mayores.
 
 ## Características
 
-- ✅ Next.js 14 con App Router
+- ✅ Next.js 15 con App Router
 - ✅ TypeScript para type safety
 - ✅ Tailwind CSS para estilos
 - ✅ Zustand para state management
