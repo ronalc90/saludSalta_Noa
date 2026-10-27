@@ -4,6 +4,16 @@
 # así que la instalación (npm ci) se hace siempre desde la raíz.
 # Las acciones van fijadas por SHA de commit (con la versión en el comentario) para que
 # un cambio en la etiqueta de un tercero no altere la CI sin pasar por un PR.
+#
+# El checkout deja persist-credentials en su valor por defecto (true) a propósito.
+# `disease-predictor` es un gitlink (submódulo) sin .gitmodules. Con
+# persist-credentials: false, actions/checkout ejecuta `git submodule foreach` al
+# quitar el token, y ese comando falla con "No url found for submodule path
+# 'disease-predictor' in .gitmodules". Con el valor por defecto, ese mismo paso solo
+# corre en la limpieza del final del job, donde el fallo queda como advertencia.
+# El token solo tiene contents: read sobre un repo público y caduca al acabar el job.
+# Cuando exista un .gitmodules con la URL de saludsalta-disease-predictor (o se quite
+# el gitlink), conviene volver a poner persist-credentials: false.
 name: CI
 
 on:
@@ -30,8 +40,6 @@ jobs:
         working-directory: frontend
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
 
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
@@ -79,8 +87,6 @@ jobs:
         working-directory: backend
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
 
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
@@ -117,8 +123,6 @@ jobs:
       PIP_DISABLE_PIP_VERSION_CHECK: 1
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
 
       # Misma versión que la imagen del Dockerfile (python:3.11-slim).
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
