@@ -216,7 +216,7 @@ Esto es lo que hace el código:
 - **Secretos fuera del repositorio.** La URI de MongoDB, `JWT_SECRET` y el resto de los secretos viven **solo en las variables de entorno de Railway (backend) y Vercel (frontend)**. Los `.env` están en `.gitignore`, los `.env.example` solo contienen valores de ejemplo como `<usuario>:<contraseña>@<cluster>`, y [`railway-env-setup.sh`](backend/railway-env-setup.sh) toma los secretos de la terminal en lugar de tenerlos escritos.
 
 > [!WARNING]
-> La comparación facial y la verificación de WebAuthn en el servidor **todavía son un prototipo**. Por eso el ingreso biométrico de esta versión no debe tratarse como una verificación de identidad fuerte. Los detalles y el plan para resolverlo están en [Estado del proyecto](#estado-del-proyecto).
+> La comparación facial y la verificación de WebAuthn en el servidor **todavía son un prototipo**. Por eso, en producción (`NODE_ENV=production`) el ingreso facial y las rutas de WebAuthn responden 503 y solo se entra con contraseña. Para probarlos en desarrollo hay que definir `ALLOW_INSECURE_BIOMETRIC_LOGIN=true`. Los detalles y el plan para resolverlo están en [Estado del proyecto](#estado-del-proyecto).
 
 ---
 
@@ -224,7 +224,7 @@ Esto es lo que hace el código:
 
 | Capa | Tecnologías |
 |---|---|
-| Frontend | Next.js 14.1 (App Router), React 18, TypeScript, Tailwind CSS 3, Zustand, Axios, `@vladmandic/face-api`, `@simplewebauthn/browser` |
+| Frontend | Next.js 14.2 (App Router), React 18, TypeScript, Tailwind CSS 3, Zustand, Axios, `@vladmandic/face-api`, `@simplewebauthn/browser` |
 | Backend | Node.js, Express 4, TypeScript 5, Mongoose 8, jsonwebtoken, bcryptjs, helmet, cors, express-rate-limit, `@simplewebauthn/server`, Axios |
 | Machine learning | Python 3.11, FastAPI, scikit-learn 1.6 (Random Forest), pandas, joblib, Uvicorn |
 | Datos | MongoDB Atlas (producción) y MongoDB 7 (local) |
